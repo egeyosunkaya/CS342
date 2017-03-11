@@ -6,6 +6,9 @@
 #define TLIB_MIN_STACK  32768
 
 /* You will define your TCB structure here */
+typedef int boolean;
+#define TRUE 1
+#define FALSE 0
 
 typedef struct TCB TCB;
 
@@ -16,6 +19,7 @@ struct TCB {
     int t_state;
     void (*func);
     void *arg;
+    boolean returned;
 };
 
 

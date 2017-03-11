@@ -1,29 +1,35 @@
 
 
+/*
+ *
+ * TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE
+ * ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST
+ * TE ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE T TE ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE T
+ * E TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZO E TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZO
+ * TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE
+ * ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST
+ * TE ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE T TE ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE T
+ * E TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZO E TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZONE TEST ZO
+ *
+*/
 
 
 
 
-#include <assert.h>
 #include <stdio.h>
 #include "tlib.h"
 
 void *foo(void *v)
 {
     int count = 0;
-//	while (count < 100) {
-//		printf ("thread %d is running\n", (unsigned int)v);
-//		if (count % 10 == 0) {
-//			tlib_yield (count);
-//		}
-//		count++;
-//	}
+	while (count < 100) {
+		printf ("thread %d is running\n", (unsigned int)v);
+		if (count % 10 == 0 && count > 9) {
+			tlib_yield (count + 3);
+		}
+		count++;
+	}
 
-    printf ("thread %d is finished , exiting...\n", (unsigned int)v);
-    tlib_yield((unsigned int)v + 1);
-
-
-    printf("Ben thread %d , bana döndüler reis \n" ,(unsigned int) v) ;
     return (NULL);
 }
 
@@ -36,19 +42,19 @@ int main(int argc, char **argv)
 
     tlib_init ();
 
-    for (i = 0; i < 6; ++i) {
-        tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+1));
+    for (i = 0; i < 100; ++i) {
+        tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+2));
         printf ("thead %d created\n", (int) tid[i]);
 
     }
 
-    //while (c < 100) {
-    printf ("thread 0 is running\n");
-    //if (c % 10 == 0) {
-    tlib_yield (1);
-    //}
-    //c++;
-    //}
+    while (c < 100) {
+        printf ("thread 0 is running\n");
+        if (c % 10 == 0 && c > 9) {
+            tlib_yield (c);
+        }
+    c++;
+    }
     return 0;
 }
 
@@ -60,8 +66,8 @@ int main(int argc, char **argv)
 
 
 
-
-/* #include <assert.h>
+/*
+ #include <assert.h>
 #include <stdio.h>
 #include "tlib.h"
 
