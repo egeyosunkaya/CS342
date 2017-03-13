@@ -17,9 +17,6 @@ struct TCB {
     ucontext_t t_cont;
     TCB *next;
     int t_state;
-    void (*func);
-    void *arg;
-    boolean returned;
 };
 
 

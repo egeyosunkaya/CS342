@@ -21,14 +21,17 @@
 
 void *foo(void *v)
 {
-    int count = 0;
-	while (count < 100) {
+    printf("%s \n" , "FOO GİRDİİ");
+    if(v == NULL)
+        printf("%s \n" , "NULLLLLLLL");
+    //int count = 0;
+	//while (count < 100) {
 		printf ("thread %d is running\n", (unsigned int)v);
-		if (count % 10 == 0 && count > 9) {
-			tlib_yield (count + 3);
-		}
-		count++;
-	}
+	//	if (count % 10 == 0 && count > 9) {
+			tlib_yield (( (int)v )+ 1);
+	//	}
+	//	count++;
+	//}
 
     return (NULL);
 }
@@ -36,25 +39,25 @@ void *foo(void *v)
 
 int main(int argc, char **argv)
 {
-    int tid[1000];
+    int tid[10];
     int c = 0;
     int i;
 
     tlib_init ();
 
-    for (i = 0; i < 100; ++i) {
+    for (i = 0; i < 10; ++i) {
         tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+2));
         printf ("thead %d created\n", (int) tid[i]);
 
     }
 
-    while (c < 100) {
-        printf ("thread 0 is running\n");
-        if (c % 10 == 0 && c > 9) {
-            tlib_yield (c);
-        }
-    c++;
-    }
+   // while (c < 100) {
+    //    printf ("thread 0 is running\n");
+     //   if (c % 10 == 0 && c > 9) {
+            tlib_yield (1);
+      //  }
+    //c++;
+    //}
     return 0;
 }
 

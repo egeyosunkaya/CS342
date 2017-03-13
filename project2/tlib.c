@@ -3,9 +3,10 @@
 #include <unistd.h>
 #include <malloc.h>
 #include <assert.h>
-
+#define __USE_GNU
 #include <ucontext.h>
 #include <sys/ucontext.h>
+#include <stdint.h>
 #include "tlib.h"
 
 #define READY 1
@@ -58,8 +59,7 @@ int thread_count; // Lets keep the thread count in here.
 TCB *ready_queue,*mainContext, *currentThread;
 static volatile boolean returned;
 
-// Stack initialization for our threads. We will fill it while creating them
-char ThreadStack[TLIB_MIN_STACK];
+
 
 
 
@@ -128,20 +128,37 @@ void stub (void (*tstartf)(void *), void *arg)
 
 int tlib_create_thread(void (*func)(void *), void *param)
 {
+    char *stack = malloc(TLIB_MIN_STACK);
+
+
     // Check whether we have space or not.
     if (TLIB_MAX_THREADS > thread_count) {
 
         // Create temp malloc
         TCB *temp = (TCB *) malloc(sizeof(TCB));
+
+        /* Increment ID  */
         id++;
-        // Set next to NULL.
+
+        /* Set next to NULL. */
         temp->next = NULL;
         temp->t_di = id;
         temp->t_state = READY;
-        getcontext(&temp->t_cont);
-        temp->t_cont.uc_stack.ss_sp = ThreadStack; // Stack pointer, point it to our threadStack :)
-        temp->t_cont.uc_stack.ss_size = sizeof(ThreadStack); // Set size
 
+
+        /*Instruction Pointer Set*/
+        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (greg_t) &stub;
+        /* Stack Create */
+        temp->t_cont.uc_stack.ss_sp = stack;
+        temp->t_cont.uc_stack.ss_size = sizeof(stack);
+
+        /* Stack Partion */
+        temp->t_cont.uc_mcontext.gregs[REG_ESP] = (greg_t) temp->t_cont.uc_stack.ss_sp;
+        temp->t_cont.uc_mcontext.gregs[REG_ESI] = (greg_t) param;
+
+
+        /*ADD NEW THREAD TO READY QUEUE
+         * */
         if (ready_queue == NULL)
             temp->t_cont.uc_link = 0;
         else {
@@ -151,12 +168,11 @@ int tlib_create_thread(void (*func)(void *), void *param)
                 tracker = tracker->next;
 
          //   printf("Thread id %i   successor id  %i ", temp->t_di, tracker->t_di);
-            temp->t_cont.uc_link = &tracker->t_cont;
+
         }
-        // Set parameters and set function
-        temp->arg = param;
-        temp->func = func;
+
         // Insert it to queue.
+        getcontext(&(temp->t_cont));
         insertThread(temp);
         thread_count++;
 
@@ -178,7 +194,6 @@ int tlib_create_thread(void (*func)(void *), void *param)
 
 int tlib_yield(int wantTid)
 {
-    currentThread->returned = FALSE;
     if (wantTid == TLIB_ANY)
         if (ready_queue->next != NULL)
             wantTid = ready_queue->next->t_di;
@@ -196,20 +211,19 @@ int tlib_yield(int wantTid)
             // That's the id we want to start
 
             getcontext(&currentThread->t_cont);
-            if (currentThread->returned == TRUE) return 0; // Getcontext returns twice , it fixes it , I hope......
 
             if (currentThread->t_state == RUNNING) {
                 // We know our current running thread. It is tmp. Lets save it to our node. And start executing next item
                 currentThread->t_state = READY;
                 //printf("\nIN THREAD %i", currentThread->t_di);
-                currentThread->returned = TRUE;
+
                 setcontext(&currentThread->t_cont);
             }else {
                 currentThread = tmp;
-                currentThread->returned = TRUE;
+
               //  printf("IN LOL %i", tmp->t_di);
                 currentThread->t_state = RUNNING;
-                stub(tmp->func, tmp->arg);
+                currentThread->t_cont.uc_mcontext.gregs[REG_EIP] = &stub;
             }
         }
         tmp = tmp->next;
