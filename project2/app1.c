@@ -54,7 +54,7 @@ int main(int argc, char **argv)
    // while (c < 100) {
     //    printf ("thread 0 is running\n");
      //   if (c % 10 == 0 && c > 9) {
-            tlib_yield (1);
+            tlib_yield (5);
       //  }
     //c++;
     //}

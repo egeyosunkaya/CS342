@@ -139,7 +139,7 @@ int tlib_create_thread(void (*func)(void *), void *param)
 
         /* Increment ID  */
         id++;
-
+        getcontext(&(temp->t_cont));
         /* Set next to NULL. */
         temp->next = NULL;
         temp->t_di = id;
@@ -147,15 +147,15 @@ int tlib_create_thread(void (*func)(void *), void *param)
 
 
         /*Instruction Pointer Set*/
-        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (greg_t) &stub;
+        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (uintptr_t) &stub;
         /* Stack Create */
         temp->t_cont.uc_stack.ss_sp = stack;
         temp->t_cont.uc_stack.ss_size = sizeof(stack);
 
         /* Stack Partion */
-        temp->t_cont.uc_mcontext.gregs[REG_ESP] = (greg_t) temp->t_cont.uc_stack.ss_sp;
-        temp->t_cont.uc_mcontext.gregs[REG_ESI] = (greg_t) param;
-
+        temp->t_cont.uc_mcontext.gregs[REG_ESP] =  (((uintptr_t) temp->t_cont.uc_stack.ss_sp) + temp->t_cont.uc_stack.ss_size);
+        temp->t_cont.uc_mcontext.gregs[REG_EDI] = param;
+        temp->t_cont.uc_mcontext.gregs[REG_ESI] = func;
 
         /*ADD NEW THREAD TO READY QUEUE
          * */
@@ -164,15 +164,15 @@ int tlib_create_thread(void (*func)(void *), void *param)
         else {
             TCB *tracker = ready_queue;
 
-            while (tracker->t_di != id - 1)
+            while (tracker->next != NULL)
                 tracker = tracker->next;
-
+            temp->t_cont.uc_link = &tracker->t_cont;
          //   printf("Thread id %i   successor id  %i ", temp->t_di, tracker->t_di);
 
         }
 
         // Insert it to queue.
-        getcontext(&(temp->t_cont));
+
         insertThread(temp);
         thread_count++;
 
@@ -202,8 +202,6 @@ int tlib_yield(int wantTid)
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
 
-    //boolean found = FALSE; // Added variable to finish for loop if a thread is found
-
   //  printf("IN here. Thread count %i", thread_count);
     for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
         if(tmp->t_di == wantTid) {
@@ -221,9 +219,8 @@ int tlib_yield(int wantTid)
             }else {
                 currentThread = tmp;
 
-              //  printf("IN LOL %i", tmp->t_di);
                 currentThread->t_state = RUNNING;
-                currentThread->t_cont.uc_mcontext.gregs[REG_EIP] = &stub;
+
             }
         }
         tmp = tmp->next;
