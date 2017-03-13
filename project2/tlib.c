@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
+#ifndef __USE_GNU
 #define __USE_GNU
+
 #include <ucontext.h>
-#include <sys/ucontext.h>
+
 #include <stdint.h>
 #include "tlib.h"
 
@@ -17,10 +16,6 @@
  *
  * Serhan Gürsoy
  * Ege Yosunkaya
- *
- *
- *
- *
  *
  */
 
@@ -57,7 +52,6 @@ int thread_count; // Lets keep the thread count in here.
 // Main context is the TCB that keeps our main context
 // Current Thread keeps the current thread.
 TCB *ready_queue,*mainContext, *currentThread;
-static volatile boolean returned;
 
 
 
@@ -75,7 +69,7 @@ int tlib_init (void)
     thread_count = 0;   // Increase thread count. In this context, make it one, since our init is also a thread
     mainContext->t_di = id;  // Set first id to zero
     mainContext->next = NULL;  // It has no NULL
-    mainContext->t_state = RUNNING; // Set it to ready.
+
 
     // Set its context to main context's current content.
     getcontext(&mainContext->t_cont);
@@ -114,7 +108,7 @@ void insertThread(TCB *thr) {
 void stub (void (*tstartf)(void *), void *arg)
 {
 
-    //printf("\nWe are in stub. Arg is : %i\n" , arg);
+    printf("\nWe are in stub. Arg is : %i\n" , (int) arg);
 
     tstartf (arg); /* calling thread start function to execute */
     /*
@@ -143,19 +137,18 @@ int tlib_create_thread(void (*func)(void *), void *param)
         /* Set next to NULL. */
         temp->next = NULL;
         temp->t_di = id;
-        temp->t_state = READY;
 
 
         /*Instruction Pointer Set*/
-        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (uintptr_t) &stub;
+        temp->t_cont.uc_mcontext.gregs[14] = (uintptr_t) &stub;
         /* Stack Create */
         temp->t_cont.uc_stack.ss_sp = stack;
-        temp->t_cont.uc_stack.ss_size = sizeof(stack);
+        temp->t_cont.uc_stack.ss_size = sizeof(stack) + 2 * sizeof(greg_t);
 
         /* Stack Partion */
         temp->t_cont.uc_mcontext.gregs[REG_ESP] =  (((uintptr_t) temp->t_cont.uc_stack.ss_sp) + temp->t_cont.uc_stack.ss_size);
-        temp->t_cont.uc_mcontext.gregs[REG_EDI] = param;
-        temp->t_cont.uc_mcontext.gregs[REG_ESI] = func;
+        temp->t_cont.uc_mcontext.gregs[4] =  (int *)param;
+        temp->t_cont.uc_mcontext.gregs[5] =  (void*) func;
 
         /*ADD NEW THREAD TO READY QUEUE
          * */
@@ -167,13 +160,12 @@ int tlib_create_thread(void (*func)(void *), void *param)
             while (tracker->next != NULL)
                 tracker = tracker->next;
             temp->t_cont.uc_link = &tracker->t_cont;
-         //   printf("Thread id %i   successor id  %i ", temp->t_di, tracker->t_di);
 
         }
 
-        // Insert it to queue.
-
+        // Insert thread to queue.
         insertThread(temp);
+
         thread_count++;
 
         return temp->t_di;
@@ -205,26 +197,17 @@ int tlib_yield(int wantTid)
   //  printf("IN here. Thread count %i", thread_count);
     for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
         if(tmp->t_di == wantTid) {
-            //found = TRUE;
-            // That's the id we want to start
+            currentThread = tmp;
+            //getcontext(&currentThread->t_cont);
 
-            getcontext(&currentThread->t_cont);
-
-            if (currentThread->t_state == RUNNING) {
-                // We know our current running thread. It is tmp. Lets save it to our node. And start executing next item
-                currentThread->t_state = READY;
-                //printf("\nIN THREAD %i", currentThread->t_di);
+                printf("\nIN THREAD %i", currentThread->t_di);
 
                 setcontext(&currentThread->t_cont);
-            }else {
-                currentThread = tmp;
-
-                currentThread->t_state = RUNNING;
-
             }
-        }
         tmp = tmp->next;
-    }
+        }
+
+
     return (TLIB_SUCCESS);
 
 }
@@ -252,3 +235,4 @@ int tlib_delete_thread(int tid)
     return (TLIB_ERROR);
 }
 
+#endif

@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     tlib_init ();
 
     for (i = 0; i < 10; ++i) {
-        tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+2));
+        tid[i] = tlib_create_thread ((void *)&foo, (void *)(i));
         printf ("thead %d created\n", (int) tid[i]);
 
     }
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
    // while (c < 100) {
     //    printf ("thread 0 is running\n");
      //   if (c % 10 == 0 && c > 9) {
-            tlib_yield (5);
+            tlib_yield (2);
       //  }
     //c++;
     //}
