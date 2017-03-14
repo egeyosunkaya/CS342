@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
     tlib_init ();
 
-    for (i = 0; i < 10; ++i) {
+    for (i = 1; i < 14; ++i) {
         tid[i] = tlib_create_thread ((void *)&foo, (void *)(i));
         printf ("thead %d created\n", (int) tid[i]);
 

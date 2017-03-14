@@ -6,6 +6,7 @@
 #include <ucontext.h>
 
 #include <stdint.h>
+#include <sys/ucontext.h>
 #include "tlib.h"
 
 #define READY 1
@@ -107,8 +108,7 @@ void insertThread(TCB *thr) {
 /* implementation of stub is already given below */
 void stub (void (*tstartf)(void *), void *arg)
 {
-
-    printf("\nWe are in stub. Arg is : %i\n" , (int) arg);
+    printf("\nWe are in stub. Arg is : %i\n" ,  arg);
 
     tstartf (arg); /* calling thread start function to execute */
     /*
@@ -122,34 +122,16 @@ void stub (void (*tstartf)(void *), void *arg)
 
 int tlib_create_thread(void (*func)(void *), void *param)
 {
-    char *stack = malloc(TLIB_MIN_STACK);
-
-
-    // Check whether we have space or not.
-    if (TLIB_MAX_THREADS > thread_count) {
-
-        // Create temp malloc
-        TCB *temp = (TCB *) malloc(sizeof(TCB));
-
-        /* Increment ID  */
-        id++;
+        TCB *temp = malloc(sizeof( TCB ) );
+        temp->t_di = ++id;
+        temp->state = RUNNING;
+        /* Create new stack */
         getcontext(&(temp->t_cont));
-        /* Set next to NULL. */
-        temp->next = NULL;
-        temp->t_di = id;
-
-
-        /*Instruction Pointer Set*/
-        temp->t_cont.uc_mcontext.gregs[14] = (uintptr_t) &stub;
-        /* Stack Create */
-        temp->t_cont.uc_stack.ss_sp = stack;
-        temp->t_cont.uc_stack.ss_size = sizeof(stack) + 2 * sizeof(greg_t);
-
-        /* Stack Partion */
-        temp->t_cont.uc_mcontext.gregs[REG_ESP] =  (((uintptr_t) temp->t_cont.uc_stack.ss_sp) + temp->t_cont.uc_stack.ss_size);
-        temp->t_cont.uc_mcontext.gregs[4] =  (int *)param;
-        temp->t_cont.uc_mcontext.gregs[5] =  (void*) func;
-
+        temp->t_cont.uc_stack.ss_sp = malloc(TLIB_MIN_STACK);
+        temp->t_cont.uc_stack.ss_size = TLIB_MIN_STACK;
+        temp->t_cont.uc_stack.ss_flags = 0;
+        temp->t_cont.uc_link = 0;
+        makecontext(&(temp->t_cont), (void *)stub , 2 , (void *)func , (int)param);
         /*ADD NEW THREAD TO READY QUEUE
          * */
         if (ready_queue == NULL)
@@ -159,7 +141,7 @@ int tlib_create_thread(void (*func)(void *), void *param)
 
             while (tracker->next != NULL)
                 tracker = tracker->next;
-            temp->t_cont.uc_link = &tracker->t_cont;
+
 
         }
 
@@ -169,9 +151,6 @@ int tlib_create_thread(void (*func)(void *), void *param)
         thread_count++;
 
         return temp->t_di;
-    }
-    else
-        return (TLIB_ERROR);
 }
 /*
  *  tlib_yield(int) is used to give CPU to another thread
@@ -194,18 +173,18 @@ int tlib_yield(int wantTid)
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
 
-  //  printf("IN here. Thread count %i", thread_count);
     for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
         if(tmp->t_di == wantTid) {
-            currentThread = tmp;
-            //getcontext(&currentThread->t_cont);
-
-                printf("\nIN THREAD %i", currentThread->t_di);
-
+            getcontext(&currentThread->t_cont);
+            if(tmp->state == RUNNING){
+                tmp->state = READY;
+                currentThread = tmp;
                 setcontext(&currentThread->t_cont);
             }
-        tmp = tmp->next;
+
         }
+        tmp = tmp->next;
+    }
 
 
     return (TLIB_SUCCESS);
