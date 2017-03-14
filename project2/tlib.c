@@ -131,7 +131,17 @@ int tlib_create_thread(void (*func)(void *), void *param)
         temp->t_cont.uc_stack.ss_size = TLIB_MIN_STACK;
         temp->t_cont.uc_stack.ss_flags = 0;
         temp->t_cont.uc_link = 0;
-        makecontext(&(temp->t_cont), (void *)stub , 2 , (void *)func , (int)param);
+        //makecontext(&(temp->t_cont), (void *)stub , 2 , (void *)func , (int)param);
+        greg_t *sp = (greg_t*)((uintptr_t) temp->t_cont.uc_stack.ss_sp
+                                            + temp->t_cont.uc_stack.ss_size);
+        sp -= 2;                                                    //Make room for 2 parameters
+        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (uintptr_t) stub; //Set EIP to stub
+        temp->t_cont.uc_mcontext.gregs[REG_ESP] = (uintptr_t) sp;   //Set ESP to point top of the stack
+        sp[0] = (uintptr_t) NULL;                                   //TRASH VALUE TO THE TRAMBOLINE ADDRESS
+        sp[1] = (uintptr_t)func;                                    //Push Parameter 1 --> func
+        sp[2] = (uintptr_t)param;                                   //Push Parameter 2 --> param
+
+
         /*ADD NEW THREAD TO READY QUEUE
          * */
         if (ready_queue == NULL)
@@ -152,6 +162,8 @@ int tlib_create_thread(void (*func)(void *), void *param)
 
         return temp->t_di;
 }
+
+
 /*
  *  tlib_yield(int) is used to give CPU to another thread
  *  wantTid is the thread id that CPU will be given
@@ -162,7 +174,6 @@ int tlib_create_thread(void (*func)(void *), void *param)
  *  if ready queue is empty -->> ?????????????????????????????? //TODO ?
  *
  */
-
 int tlib_yield(int wantTid)
 {
     if (wantTid == TLIB_ANY)
