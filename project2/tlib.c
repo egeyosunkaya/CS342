@@ -54,10 +54,6 @@ int thread_count; // Lets keep the thread count in here.
 // Current Thread keeps the current thread.
 TCB *ready_queue,*mainContext, *currentThread;
 
-
-
-
-
 int tlib_init (void)
 {
     // Lets create our main thread.
@@ -108,8 +104,8 @@ void insertThread(TCB *thr) {
 /* implementation of stub is already given below */
 void stub (void (*tstartf)(void *), void *arg)
 {
-    printf("\nWe are in stub. Arg is : %i\n" ,  arg);
-
+   // printf("\nWe are in stub. Arg is : %i\n" ,  arg);
+      currentThread->state == RUNNING;
     tstartf (arg); /* calling thread start function to execute */
     /*
         We are done with executing the application specified thread start
@@ -176,28 +172,38 @@ int tlib_create_thread(void (*func)(void *), void *param)
  */
 int tlib_yield(int wantTid)
 {
-    if (wantTid == TLIB_ANY)
+    // If we want to yield anything, then just yield to next. If It exists.. If it doesnt exists, just
+    // go to the head of the ready queue.
+    if (wantTid == TLIB_ANY) {
         if (ready_queue->next != NULL)
             wantTid = ready_queue->next->t_di;
-       else
+        else
             wantTid = ready_queue->t_di;
+    }else if (wantTid == TLIB_SELF)
+        wantTid = currentThread->t_di;
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
 
     for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
+       // printf("\n**We are in here : %i, Current thread: %i; We are looking for : %i **\n",tmp->t_di,currentThread->t_di, wantTid);
         if(tmp->t_di == wantTid) {
             getcontext(&currentThread->t_cont);
+           // printf("We are in the want id and tmp match. If it wont go further, well, then its because RUNNING fucked it up :) \n");
             if(tmp->state == RUNNING){
                 tmp->state = READY;
+                //printf("\nCurrent thread %i and we are switching to %i\n",currentThread->t_di,tmp->t_di);
                 currentThread = tmp;
                 setcontext(&currentThread->t_cont);
+            }else {
+                currentThread = tmp;
+                currentThread->state = RUNNING;
             }
-
         }
         tmp = tmp->next;
     }
 
 
+    printf("Couldn't find %i. Its finished or you are already in that thread. I dunno xd", wantTid);
     return (TLIB_SUCCESS);
 
 }
@@ -207,7 +213,7 @@ int tlib_delete_thread(int tid)
 {
     if (tid == TLIB_SELF) {
 
-       // printf("Deleted tid %i", currentThread->t_di);
+        printf("Deleted tid %i", currentThread->t_di);
         int thid = currentThread->t_di;
 
         TCB *tracker = ready_queue;

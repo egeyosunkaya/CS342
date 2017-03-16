@@ -14,7 +14,7 @@
 */
 
 
-
+/*
 
 #include <stdio.h>
 #include "tlib.h"
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
    // while (c < 100) {
     //    printf ("thread 0 is running\n");
      //   if (c % 10 == 0 && c > 9) {
-            tlib_yield (2);
+            tlib_yield (0);
       //  }
     //c++;
     //}
@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 }
 
 
+*/
 
 
 
@@ -69,18 +70,19 @@ int main(int argc, char **argv)
 
 
 
-/*
  #include <assert.h>
 #include <stdio.h>
 #include "tlib.h"
 
 void *foo(void *v)
 {
-	int count = 0; 
-	while (count < 10) {
+	int count = 0;
+	while (count < 100) {
 		printf ("thread %d is running\n", (unsigned int)v);
-		if (count % 100 == 0) {
-		//	 tlib_yield (TLIB_SELF);
+		if (count % 10 == 0 && count > 10) {
+            printf("\nYielding To %i\n", count/10);
+			 tlib_yield (count/10);
+            //printf("FOO İçinde aynalı çarşı");
 		}
 		count++; 
 	}
@@ -112,4 +114,4 @@ main(int argc, char **argv)
 	}
 	return 0;
 }
-*/
+
