@@ -108,6 +108,7 @@ void stub (void (*tstartf)(void *), void *arg)
    // printf("\nWe are in stub. Arg is : %i\n" ,  arg);
      // currentThread->state == RUNNING;
     tstartf (arg); /* calling thread start function to execute */
+    printf("I believe I'm done :) I'm thread %i\n", currentThread->t_di);
     /*
         We are done with executing the application specified thread start
         function. Hence we can now terminate the thread
@@ -121,7 +122,7 @@ int tlib_create_thread(void (*func)(void *), void *param)
 {
         TCB *temp = malloc(sizeof( TCB ) );
         temp->t_di = ++id;
-        temp->state = RUNNING;
+        temp->state = READY;
         /* Create new stack */
         getcontext(&(temp->t_cont));
         temp->t_cont.uc_stack.ss_sp = malloc(TLIB_MIN_STACK);
@@ -188,31 +189,39 @@ int tlib_yield(int wantTid)
         wantTid = currentThread->t_di;
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
-
+   // currentThread->state = RUNNING;
     for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
        // printf("\n**We are in here : %i, Current thread: %i; We are looking for : %i **\n",tmp->t_di,currentThread->t_di, wantTid);
         if(tmp->t_di == wantTid) {
             getcontext(&currentThread->t_cont);
            // printf("We are in the want id and tmp match.\n");
-            if(tmp->state == RUNNING){
-                tmp->state = READY;
-                //printf("\nCurrent thread %i and we are switching to %i\n",currentThread->t_di,tmp->t_di);
+            if(tmp->state != RUNNING){
+                currentThread->state = READY;
+                tmp->state = RUNNING;
+                printf("\nCurrent thread %i and we are switching to %i Thread count %i\n",currentThread->t_di,tmp->t_di, thread_count);
                 currentThread = tmp;
                 found = true;
                 setcontext(&currentThread->t_cont);
             }else {
+                printf("Am i here");
                 currentThread = tmp;
-                currentThread->state = RUNNING;
+                tmp->state=READY;
+                //currentThread->state = RUNNING;
             }
         }
         tmp = tmp->next;
     }
 
-    if (found)
+    //currentThread->state = RUNNING;
+    if (found) {
+        //currentThread->state = RUNNING;
         return (currentThread->t_di);
+    }
     else {
         // No thread found with given id.
-      //  printf("Couldn't find %i. Its finished or never existed\n", wantTid);
+        currentThread->state =RUNNING;
+        printf("Couldn't find %i. Its finished or never existed\n", wantTid);
+
         return (TLIB_INVALID);
     }
 }
@@ -273,4 +282,6 @@ int tlib_delete_thread(int tid)
 }
 
 #endif
+
+
 
