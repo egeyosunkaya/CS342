@@ -1,6 +1,6 @@
 
 # CS342 Operating Systems Project1 
- Using Interprocess Communication Mechanisms - Files / Pipes / Thread Shared Data
+ Using Interprocess Communication Mechanisms - Files / Pipes / Thread Shared Data \n
  Use make / make run / make clean to compile and run the code. 
 
 # CS342 Operating Systems Project2
