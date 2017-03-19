@@ -3,6 +3,10 @@ Ege Yosunkaya 21402025
 Serhan Gürsoy 21400840
 
 
+\** Project Specifications in project2.pdf 
+
+
+
 # -- -- -- Create Thread -- -- --
  It creates a new thread and adds to the queue. 
  The most challangeing thing was creating and initializing the stack.
