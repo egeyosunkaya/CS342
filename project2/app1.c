@@ -76,16 +76,21 @@ int main(int argc, char **argv)
 
 void *foo(void *v)
 {
+    /*
 	int count = 0;
 	while (count < 100) {
 		printf ("thread %d is running with count : %i\n", (unsigned int)v, count);
 		if (count % 10 == 0 && count > 10) {
             printf("\nYielding To %i\n", count/10);
 			 tlib_yield (count/10);
-            printf("FOO İçinde aynalı çarşı");
+           printf("Inside Foo... Means that yield ended successfully.\n");
 		}
 		count++; 
-	}
+	}*/
+
+    printf("Thread %d running! Lets yield to other!", (unsigned int) v);
+    //tlib_delete_thread(v);
+    tlib_yield(v+1);
 	return (NULL); 
 }
 
@@ -99,6 +104,7 @@ main(int argc, char **argv)
 	
 	tlib_init ();
 
+    /*
 	for (i = 0; i < 10; ++i) {
 		tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+1));
 		printf ("thead %d created\n",  tid[i]);
@@ -111,7 +117,23 @@ main(int argc, char **argv)
 			 tlib_yield (tid[(c % 100)]);
 		}
 		c++;
-	}
+	}*/
+
+    tid[0] = tlib_create_thread((void *)&foo, (void *)(1));
+    tid[1] = tlib_create_thread((void *)&foo, (void *)(2));
+    tid[2] = tlib_create_thread((void *)&foo, (void *)(3));
+    tid[3] = tlib_create_thread((void *)&foo, (void *)(4));
+    tid[4] = tlib_create_thread((void *)&foo, (void *)(5));
+    tid[5] = tlib_create_thread((void *)&foo, (void *)(6));
+
+    //tlib_yield(1);
+    tlib_delete_thread(5);
+    //tlib_delete_thread(4);
+    //tlib_delete_thread(3);
+    //tlib_delete_thread(2);
+    //tlib_delete_thread(1);
+    tlib_yield(3);
+
 	return 0;
 }
 
