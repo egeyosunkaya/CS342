@@ -52,6 +52,13 @@ int thread_count; // Lets keep the thread count in here.
 TCB *ready_queue,*mainContext, *currentThread;
 
 // Initializing the thread.
+
+/* Creates a mainContext to put in thread0 
+ * Thread 0 has NULL as start function and parameter
+ * It copies the user programs context and takes it 
+ * Thread 0 is the head of the ready queue however library uses next of thread 0 as the first ready thread
+ * Thread 0 provides us to return user app after threads are finished and deleted
+ */
 int tlib_init (void)
 {
     // Lets create our main thread.
@@ -83,6 +90,10 @@ int tlib_init (void)
     return (TLIB_SUCCESS);
 }
 
+/*
+ * Takes a TCB as a parameter and insert it to ready queue
+ */
+
 void insertThread(TCB *thr) {
     TCB *tracker;
     if (ready_queue == NULL) {
@@ -99,6 +110,7 @@ void insertThread(TCB *thr) {
 }
 
 /* implementation of stub is already given below */
+
 void stub (void (*tstartf)(void *), void *arg) {
     tstartf (arg); /* calling thread start function to execute */
     /*
@@ -115,7 +127,7 @@ void stub (void (*tstartf)(void *), void *arg) {
 int tlib_create_thread(void (*func)(void *), void *param)
 {
 
-    // No more place left.
+    // No more place left for creating a new thread .
     if (thread_count == TLIB_MAX_THREADS)
         return TLIB_NOMORE;
 
@@ -223,7 +235,7 @@ int tlib_delete_thread(int tid)
         while (tracker->next->t_di != thid)
             tracker = tracker->next;
 
-        TCB *deletor = tracker->next;  // Deletor, yes, its deletor. Its the node that we gonna keep node which we wanna delete
+        TCB *deletor = tracker->next;  		    // Deletor, yes, its deletor(Clever name , nice job). Its the node that we gonna keep node which we wanna delete
         tracker->next = tracker->next->next;
         // Decrease thread_count.
         thread_count--;
@@ -247,7 +259,7 @@ int tlib_delete_thread(int tid)
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
         thread_count--;
-        if(ready_queue->next != NULL)           //NEW
+        if(ready_queue->next != NULL)          
             currentThread = ready_queue->next;
         else
             currentThread = ready_queue;
@@ -268,7 +280,7 @@ int tlib_delete_thread(int tid)
         deletor->t_cont.uc_link = 0;
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
-        if(ready_queue->next != NULL)           //NEW
+        if(ready_queue->next != NULL)          
             currentThread = ready_queue->next;
         else
             currentThread = ready_queue;
