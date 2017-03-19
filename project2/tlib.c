@@ -187,11 +187,11 @@ int tlib_yield(int wantTid)
     }else if (wantTid == TLIB_SELF) // Yielding to itself? Well.. Do nothing
         wantTid = currentThread->t_di;//wantTid = currentThread->t_di;
     else if (wantTid == currentThread->t_di)
-        wantTid = currentThread->t_di;
+        return TLIB_SELF;
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
    // currentThread->state = RUNNING;
-    for (int k = 0; k < thread_count ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
+    for (int k = 0; k < thread_count + 1 ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
        // printf("\n**We are in here : %i, Current thread: %i; We are looking for : %i **\n",tmp->t_di,currentThread->t_di, wantTid);
         if(tmp->t_di == wantTid) {
             getcontext(&currentThread->t_cont);
@@ -205,9 +205,9 @@ int tlib_yield(int wantTid)
                 found = true;
                 setcontext(&currentThread->t_cont);
             }else {
-                printf("Am i here");
-                currentThread = tmp;
-                tmp->state=READY;
+                //printf("Am i here");
+                //currentThread = tmp;
+                //tmp->state=READY;
                 //currentThread->state = RUNNING;
             }
         }
@@ -221,7 +221,7 @@ int tlib_yield(int wantTid)
     }
     else {
         // No thread found with given id.
-        currentThread->state =RUNNING;
+        //currentThread->state =RUNNING;
         printf("Couldn't find %i. Its finished or never existed\n", wantTid);
 
         return (TLIB_INVALID);
@@ -231,12 +231,11 @@ int tlib_yield(int wantTid)
 
 int tlib_delete_thread(int tid)
 {
-
+    bool first_run = TRUE;
     if (tid == TLIB_SELF) {
 
         printf("\nXXXXXXXXDeleted tid %iXXXXXXX\n", currentThread->t_di);
         int thid = currentThread->t_di;
-
         TCB *tracker = ready_queue;
 
         while (tracker->next->t_di != thid)
@@ -245,16 +244,24 @@ int tlib_delete_thread(int tid)
         TCB *deletor = tracker->next;
         tracker->next = tracker->next->next;
         //currentThread = tracker;
+
+
         thread_count--;
         deletor->t_cont.uc_stack.ss_size = 0;
         deletor->t_cont.uc_link = 0;
         free(deletor->t_cont.uc_stack.ss_sp);
-        free(deletor);
-        if(ready_queue->next != NULL)           //NEW
-            currentThread = ready_queue->next;
-        else
+        if(thread_count == 1) {                     //Deleting the last element in ready queue
+            ready_queue->next = NULL;
             currentThread = ready_queue;
-        //tlib_yield(TLIB_ANY);
+            setcontext(&ready_queue->t_cont);
+        }else {
+            if (ready_queue->next != NULL)           //NEW
+                currentThread = ready_queue->next;
+            else
+                currentThread = ready_queue;
+            first_run = FALSE;
+            setcontext(&currentThread->t_cont);
+        }
     } else if (tid == TLIB_ANY) { // Does that even exist? If so
         TCB *deletor = ready_queue;
         ready_queue = ready_queue->next;
@@ -263,7 +270,12 @@ int tlib_delete_thread(int tid)
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
         thread_count--;
-        //tlib_yield(TLIB_ANY);
+        if(ready_queue->next != NULL)           //NEW
+            currentThread = ready_queue->next;
+        else
+            currentThread = ready_queue;
+        first_run = FALSE;
+        setcontext(&currentThread->t_cont);
     } else { // Delete the node
 
         printf("Deleted tid %i", tid);
@@ -282,9 +294,17 @@ int tlib_delete_thread(int tid)
         deletor->t_cont.uc_link = 0;
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
-        tlib_yield(TLIB_ANY);
+        if(ready_queue->next != NULL)           //NEW
+            currentThread = ready_queue->next;
+        else
+            currentThread = ready_queue;
+        first_run = FALSE;
+       setcontext(&currentThread->t_cont);
     }
-    return (TLIB_ERROR);
+    if(first_run == FALSE)
+        setcontext(&ready_queue->next->t_cont);
+    else
+        return (TLIB_ERROR);
 }
 
 
