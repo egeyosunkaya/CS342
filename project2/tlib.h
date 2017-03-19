@@ -16,7 +16,6 @@ struct TCB {
     int t_di;
     ucontext_t t_cont;
     TCB *next;
-    int state;
 };
 
 

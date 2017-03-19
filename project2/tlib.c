@@ -6,18 +6,14 @@
 #include <ucontext.h>
 
 #include <stdint.h>
-#include <sys/ucontext.h>
 #include <stdbool.h>
 #include "tlib.h"
-
-#define READY 1
-#define RUNNING -1
 
 /*
  * Committers
  *
- * Serhan Gürsoy
- * Ege Yosunkaya
+ * Serhan Gürsoy 21400840
+ * Ege Yosunkaya 21402025
  *
  */
 
@@ -47,26 +43,28 @@
 //               佛祖保佑         永无BUG
 //
 
-int id; // We need id counter. We should assign different id's.
+int id;           // We need id counter. We should assign different id's.
 int thread_count; // Lets keep the thread count in here.
 
-// Ready_queue is the list of queues that created.
-// Main context is the TCB that keeps our main context
-// Current Thread keeps the current thread.
+/* Ready_queue is the list of queues that created.
+ Main context is the TCB that keeps our main context
+ Current Thread keeps the current thread. */
 TCB *ready_queue,*mainContext, *currentThread;
 
+// Initializing the thread.
 int tlib_init (void)
 {
     // Lets create our main thread.
     mainContext = (TCB *)malloc(sizeof(TCB));
 
+    // If we are done, return no memory.
     if (mainContext == NULL)
-        return (TLIB_NOMEMORY);
+        return (TLIB_ERROR);
 
-    id = 0;   // Lets start id's from 1, hence we can increase that.
-    thread_count = 0;   // Increase thread count. In this context, make it one, since our init is also a thread
-    mainContext->t_di = id;  // Set first id to zero
-    mainContext->next = NULL;  // It has no NULL
+    id = 0;                     // Lets start id's from 0, hence we can increase that.
+    thread_count = 0;           // Increase thread count. In this context, make it one, since our init is also a thread
+    mainContext->t_di = id;     // Set first id to zero
+    mainContext->next = NULL;   // It has no NULL
 
 
     // Set its context to main context's current content.
@@ -74,7 +72,7 @@ int tlib_init (void)
 
     // NO CONTENT? Something happened for sure..
     if (&mainContext->t_cont == NULL)
-       return(TLIB_NONE);
+        return(TLIB_NONE);
 
     // Our ready queue will be main also.
     ready_queue = mainContext;
@@ -88,77 +86,76 @@ int tlib_init (void)
 void insertThread(TCB *thr) {
     TCB *tracker;
     if (ready_queue == NULL) {
-        // Well, if everything goes right, it can't be null. However, we need to make it sure, aye?
-        //AYE AYE CAPTAIN
+        // If ready_queue is NULL. This shouldnt be possible unless someone deleted all threads and tries to add new one
+        // Just a safe guard
         ready_queue = thr;
     } else {
-        // Go until next becomes null. When its null, just damn add it to next.
+        // Go until next becomes null. When its null, add it to next.
         tracker = ready_queue;
         while(tracker->next != NULL)
             tracker = tracker->next;
-
         tracker->next = thr;
-        //printf("Inserted! Thread id %i Total thread count is %i\n" , thr->t_di, (thread_count));
     }
 }
 
 /* implementation of stub is already given below */
-void stub (void (*tstartf)(void *), void *arg)
-{
-   // printf("\nWe are in stub. Arg is : %i\n" ,  arg);
-     // currentThread->state == RUNNING;
+void stub (void (*tstartf)(void *), void *arg) {
     tstartf (arg); /* calling thread start function to execute */
     /*
         We are done with executing the application specified thread start
         function. Hence we can now terminate the thread
     */
     tlib_delete_thread(TLIB_SELF);
-    printf("I believe I'm done :) I'm thread %i\n", currentThread->t_di);
     exit(0);
 }
 
-
+/*
+ * Creating our new fresh thread. Most fancy in project probably.
+ */
 int tlib_create_thread(void (*func)(void *), void *param)
 {
-        TCB *temp = malloc(sizeof( TCB ) );
-        temp->t_di = ++id;
-        temp->state = READY;
-        /* Create new stack */
-        getcontext(&(temp->t_cont));
-        temp->t_cont.uc_stack.ss_sp = malloc(TLIB_MIN_STACK);
-        temp->t_cont.uc_stack.ss_size = TLIB_MIN_STACK;
-        temp->t_cont.uc_stack.ss_flags = 0;
+
+    // No more place left.
+    if (thread_count == TLIB_MAX_THREADS)
+        return TLIB_NOMORE;
+
+    // ALlocate TCB.
+    TCB *temp = malloc(sizeof( TCB ) );
+    temp->t_di = ++id;                                     // Set id
+    /* Create new stack */
+    getcontext(&(temp->t_cont));                           // Get current context in order to modify it
+    temp->t_cont.uc_stack.ss_sp = malloc(TLIB_MIN_STACK);  // ALlocate sp with MIN_STACK
+    temp->t_cont.uc_stack.ss_size = TLIB_MIN_STACK;        // Set size
+    temp->t_cont.uc_stack.ss_flags = 0;                    // Set flag, no need but eh..
+    temp->t_cont.uc_link = 0;                              // Set link to zero. There is no turning point for you pal
+
+    greg_t *sp = (greg_t*)((uintptr_t) temp->t_cont.uc_stack.ss_sp
+                           + temp->t_cont.uc_stack.ss_size);
+    sp -= 2;                                                    //Make room for 2 parameters
+    temp->t_cont.uc_mcontext.gregs[REG_EIP] = (uintptr_t) stub; //Set EIP to stub
+    temp->t_cont.uc_mcontext.gregs[REG_ESP] = (uintptr_t) sp;   //Set ESP to point top of the stack
+    sp[0] = (uintptr_t) NULL;                                   //TRASH VALUE TO THE TRAMBOLINE ADDRESS
+    sp[1] = (uintptr_t)func;                                    //Push Parameter 1 --> func
+    sp[2] = (uintptr_t)param;                                   //Push Parameter 2 --> param
+
+
+    /*ADD NEW THREAD TO READY QUEUE
+     * */
+    if (ready_queue == NULL)
         temp->t_cont.uc_link = 0;
-        //makecontext(&(temp->t_cont), (void *)stub , 2 , (void *)func , (int)param);
-        greg_t *sp = (greg_t*)((uintptr_t) temp->t_cont.uc_stack.ss_sp
-                                            + temp->t_cont.uc_stack.ss_size);
-        sp -= 2;                                                    //Make room for 2 parameters
-        temp->t_cont.uc_mcontext.gregs[REG_EIP] = (uintptr_t) stub; //Set EIP to stub
-        temp->t_cont.uc_mcontext.gregs[REG_ESP] = (uintptr_t) sp;   //Set ESP to point top of the stack
-        sp[0] = (uintptr_t) NULL;                                   //TRASH VALUE TO THE TRAMBOLINE ADDRESS
-        sp[1] = (uintptr_t)func;                                    //Push Parameter 1 --> func
-        sp[2] = (uintptr_t)param;                                   //Push Parameter 2 --> param
+    else {
+        TCB *tracker = ready_queue;
 
+        while (tracker->next != NULL)
+            tracker = tracker->next;
+    }
 
-        /*ADD NEW THREAD TO READY QUEUE
-         * */
-        if (ready_queue == NULL)
-            temp->t_cont.uc_link = 0;
-        else {
-            TCB *tracker = ready_queue;
+    // Insert thread to queue.
+    insertThread(temp);
 
-            while (tracker->next != NULL)
-                tracker = tracker->next;
+    thread_count++;
 
-
-        }
-
-        // Insert thread to queue.
-        insertThread(temp);
-
-        thread_count++;
-
-        return temp->t_di;
+    return temp->t_di;
 }
 
 
@@ -168,84 +165,67 @@ int tlib_create_thread(void (*func)(void *), void *param)
  *  if wantTid == TLIB_ANY it means give the CPU to any other thread
  *  function will check if there is another thread in the queue and give CPU to the first "ready" thread
  *
- *
- *  if ready queue is empty -->> ?????????????????????????????? //TODO ?
- *
  */
 int tlib_yield(int wantTid)
 {
     bool first_time = TRUE;
     bool found=FALSE;
-    // If we want to yield anything, then just yield to next. If It exists.. If it doesnt exists, just
-    // go to the head of the ready queue.
-    if (wantTid == TLIB_ANY) {
-        printf("Yielding to the ANY!");
-        if (ready_queue->next != NULL)
-            wantTid = ready_queue->next->t_di;
-        else
-            wantTid = ready_queue->t_di;
+
+    // If we want to yield anything, then just yield to next. If It exists..
+    // If it doesnt exists, just go to the head of the ready queue.
+    if (wantTid == TLIB_ANY) { // printf("Yielding to the ANY!");
+        if (ready_queue->next != NULL) wantTid = ready_queue->next->t_di;  // Next exists
+        else wantTid = ready_queue->t_di;       //  Next not exits. So go to head of the queue.
     }else if (wantTid == TLIB_SELF) // Yielding to itself? Well.. Do nothing
-        wantTid = currentThread->t_di;//wantTid = currentThread->t_di;
+        wantTid = currentThread->t_di;
     else if (wantTid == currentThread->t_di)
-        return TLIB_SELF;
+        wantTid = currentThread->t_di;
 
     TCB *tmp = ready_queue; // Get the copy of ready queue
-   // currentThread->state = RUNNING;
+
     for (int k = 0; k < thread_count + 1 ; k++) {  // Since we already know our thread count, we can iter through all threads to find our thread
-       // printf("\n**We are in here : %i, Current thread: %i; We are looking for : %i **\n",tmp->t_di,currentThread->t_di, wantTid);
         if(tmp->t_di == wantTid) {
             getcontext(&currentThread->t_cont);
-           // printf("We are in the want id and tmp match.\n");
             if(first_time == TRUE){
-                currentThread->state = READY;
-                tmp->state = RUNNING;
                 first_time = FALSE;
-                printf("\nCurrent thread %i and we are switching to %i Thread count %i\n",currentThread->t_di,tmp->t_di, thread_count);
                 currentThread = tmp;
                 found = true;
                 setcontext(&currentThread->t_cont);
-            }else {
-                //printf("Am i here");
-                //currentThread = tmp;
-                //tmp->state=READY;
-                //currentThread->state = RUNNING;
             }
         }
         tmp = tmp->next;
     }
 
-    //currentThread->state = RUNNING;
-    if (found) {
-        //currentThread->state = RUNNING;
+    if (found) { // Yes, we found it! Now lets return the id.
         return (currentThread->t_di);
-    }
-    else {
+    } else {
         // No thread found with given id.
-        //currentThread->state =RUNNING;
         printf("Couldn't find %i. Its finished or never existed\n", wantTid);
-
         return (TLIB_INVALID);
     }
 }
 
-
+/*
+ * Deleting given thread corresponds to parameter id. If SELF, delete current. If ANY, delete any.
+ */
 int tlib_delete_thread(int tid)
 {
-    bool first_run = TRUE;
+    bool first_run = TRUE;   // Check var
+    /*
+     * If tid == SELF, then delete the self. If tid ANY(Which I believe that won't ever get called by someone ) delete any.
+     *
+     */
     if (tid == TLIB_SELF) {
-
-        printf("\nXXXXXXXXDeleted tid %iXXXXXXX\n", currentThread->t_di);
         int thid = currentThread->t_di;
         TCB *tracker = ready_queue;
 
+        // Iter through, find the thread.
         while (tracker->next->t_di != thid)
             tracker = tracker->next;
 
-        TCB *deletor = tracker->next;
+        TCB *deletor = tracker->next;  // Deletor, yes, its deletor. Its the node that we gonna keep node which we wanna delete
         tracker->next = tracker->next->next;
-        //currentThread = tracker;
-
-
+        // Decrease thread_count.
         thread_count--;
         deletor->t_cont.uc_stack.ss_size = 0;
         deletor->t_cont.uc_link = 0;
@@ -255,13 +235,10 @@ int tlib_delete_thread(int tid)
             currentThread = ready_queue;
             setcontext(&ready_queue->t_cont);
         }else {
-            if (ready_queue->next != NULL)           //NEW
-                currentThread = ready_queue->next;
-            else
-                currentThread = ready_queue;
+            if (ready_queue->next != NULL)  currentThread = ready_queue->next;
+            else currentThread = ready_queue;
             first_run = FALSE;
-            setcontext(&currentThread->t_cont);
-        }
+            setcontext(&currentThread->t_cont);  }
     } else if (tid == TLIB_ANY) { // Does that even exist? If so
         TCB *deletor = ready_queue;
         ready_queue = ready_queue->next;
@@ -277,8 +254,6 @@ int tlib_delete_thread(int tid)
         first_run = FALSE;
         setcontext(&currentThread->t_cont);
     } else { // Delete the node
-
-        printf("Deleted tid %i", tid);
         int thid = tid;
 
         TCB *tracker = ready_queue;
@@ -288,7 +263,6 @@ int tlib_delete_thread(int tid)
 
         TCB *deletor = tracker->next;
         tracker->next = tracker->next->next;
-        //currentThread = tracker;
         thread_count--;
         deletor->t_cont.uc_stack.ss_size = 0;
         deletor->t_cont.uc_link = 0;
@@ -299,8 +273,9 @@ int tlib_delete_thread(int tid)
         else
             currentThread = ready_queue;
         first_run = FALSE;
-       setcontext(&currentThread->t_cont);
+        setcontext(&currentThread->t_cont);
     }
+
     if(first_run == FALSE)
         setcontext(&ready_queue->next->t_cont);
     else

@@ -76,11 +76,11 @@ void *foo(void *v)
 {
 	int count = 0;
 	while (count < 100) {
-		printf ("thread %d is running with count : %i\n", (unsigned int)v, count);
+		 printf ("thread %d is running with count : %i\n", (unsigned int)v, count);
 		if (count % 10 == 0 && count > 10) {
-            printf("\nYielding To %i\n", count/10);
+           // printf("\nYielding To %i\n", count/10);
 			 tlib_yield (count/10);
-            printf("FOO İçinde aynalı çarşı");
+          //  printf("FOO İçinde aynalı çarşı");
 		}
 		count++;
 	}
@@ -105,7 +105,7 @@ main(int argc, char **argv)
 	while (c < 200) {
 	  	printf ("thread 1 is running\n");
 		if (c % 100 == 0 && c > 99) {
-            printf("Hello kidoman %i " , tid[c/100]);
+       //     printf("Hello kidoman %i " , tid[c/100]);
 			 tlib_yield (tid[(c % 100)]);
 		}
 		c++;
