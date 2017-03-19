@@ -100,7 +100,7 @@ main(int argc, char **argv)
 	tlib_init ();
 
 	for (i = 0; i < 10; ++i) {
-		tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+2));
+		tid[i] = tlib_create_thread ((void *)&foo, (void *)(i+1));
 		printf ("thead %d created\n",  tid[i]);
 	}
 		
@@ -108,7 +108,7 @@ main(int argc, char **argv)
 	  	printf ("thread 1 is running\n");
 		if (c % 100 == 0 && c > 99) {
             printf("Hello kidoman %i " , tid[c/100]);
-			 tlib_yield (tid[(c / 100)]);
+			 tlib_yield (tid[(c % 100)]);
 		}
 		c++;
 	}

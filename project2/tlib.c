@@ -108,12 +108,12 @@ void stub (void (*tstartf)(void *), void *arg)
    // printf("\nWe are in stub. Arg is : %i\n" ,  arg);
      // currentThread->state == RUNNING;
     tstartf (arg); /* calling thread start function to execute */
-    printf("I believe I'm done :) I'm thread %i\n", currentThread->t_di);
     /*
         We are done with executing the application specified thread start
         function. Hence we can now terminate the thread
     */
     tlib_delete_thread(TLIB_SELF);
+    printf("I believe I'm done :) I'm thread %i\n", currentThread->t_di);
     exit(0);
 }
 
@@ -174,6 +174,7 @@ int tlib_create_thread(void (*func)(void *), void *param)
  */
 int tlib_yield(int wantTid)
 {
+    bool first_time = TRUE;
     bool found=FALSE;
     // If we want to yield anything, then just yield to next. If It exists.. If it doesnt exists, just
     // go to the head of the ready queue.
@@ -195,9 +196,10 @@ int tlib_yield(int wantTid)
         if(tmp->t_di == wantTid) {
             getcontext(&currentThread->t_cont);
            // printf("We are in the want id and tmp match.\n");
-            if(tmp->state != RUNNING){
+            if(first_time == TRUE){
                 currentThread->state = READY;
                 tmp->state = RUNNING;
+                first_time = FALSE;
                 printf("\nCurrent thread %i and we are switching to %i Thread count %i\n",currentThread->t_di,tmp->t_di, thread_count);
                 currentThread = tmp;
                 found = true;
@@ -248,7 +250,11 @@ int tlib_delete_thread(int tid)
         deletor->t_cont.uc_link = 0;
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
-        tlib_yield(TLIB_ANY);
+        if(ready_queue->next != NULL)           //NEW
+            currentThread = ready_queue->next;
+        else
+            currentThread = ready_queue;
+        //tlib_yield(TLIB_ANY);
     } else if (tid == TLIB_ANY) { // Does that even exist? If so
         TCB *deletor = ready_queue;
         ready_queue = ready_queue->next;
@@ -257,7 +263,7 @@ int tlib_delete_thread(int tid)
         free(deletor->t_cont.uc_stack.ss_sp);
         free(deletor);
         thread_count--;
-        tlib_yield(TLIB_ANY);
+        //tlib_yield(TLIB_ANY);
     } else { // Delete the node
 
         printf("Deleted tid %i", tid);
