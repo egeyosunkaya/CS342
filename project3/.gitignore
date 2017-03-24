@@ -1,0 +1,5 @@
+cmake-build-debug
+*.pdf
+CmakeLists.txt
+.idea
+
