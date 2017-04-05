@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
             exit(5);
     }
     for(int i = 0; i < NUM_PHIL; i++) {
-        printf("Philosopher %d is finished with hungry time: %.6f ms. \n", (i + 1), hungry_times[i]);
+        printf("Philosopher %d duration of hungry state: %.6f ms. \n", (i + 1), hungry_times[i]);
     }
 
     //TEST CODE FOR REPORT - AVERAGE and STANDART DEVIATION

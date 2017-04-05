@@ -1,7 +1,7 @@
 
 phil: phil.c
-	gcc -pthread -Wall -o phil phil.c
+	gcc -pthread -Wall -o phil phil.c -lm
 run:
-	./phil 500 1000 50 100 expotential 100 -lpthread -lm
+	./phil 5 500 1000 50 100 exponential 100 -lpthread -lm
 clean: 
 	rm -fr *~ *.o phil 
