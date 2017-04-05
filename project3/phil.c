@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
             int right = RIGHT;
             int left = LEFT;
             if ((state[num] == EATING && state[RIGHT] == EATING) || (state[num] == EATING && state[LEFT] == EATING)) {
-                printf("%s \n" , "We Fucked up guysss!");
+                printf("%s \n" , "DEADLOCK ALLERT");
             }
             sem_post(&s);
         }
