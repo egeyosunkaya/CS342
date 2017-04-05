@@ -85,7 +85,7 @@ void test(int num){
        state[RIGHT] != EATING)
     {
         state[num] = EATING;
-        printf("philosopher %d is EATING \n" , num + 1);
+        printf("philosopher %d EATING \n" , num + 1);
         sem_post(&locks[num]);
 
     }
@@ -95,7 +95,7 @@ void take_fork(int num){
     sem_wait(&s);
     state[num] = HUNGRY;
 
-    printf("philosopher %d is HUNGRY \n", num + 1);
+    printf("philosopher %d HUNGRY \n", num + 1);
     test(num);
     sem_post(&s);
     sem_wait(&locks[num]);
@@ -104,7 +104,7 @@ void take_fork(int num){
 void put_fork(int num){
     sem_wait(&s);
     state[num] = THINKING;
-    printf("philosopher %d is THINKING \n" , num + 1);
+    printf("philosopher %d THINKING \n" , num + 1);
     test(LEFT);
     test(RIGHT);
     sem_post(&s);
