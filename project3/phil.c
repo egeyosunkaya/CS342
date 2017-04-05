@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
 
     for(int k = 0; k < PHIL_COUNT; k++){
         pthread_create(&thread_list[k], NULL , foo , &phil_num[k]);
-        printf("Philosopher %d is THINKING \n" , k + 1);
+        printf("Philosopher %d THINKING \n" , k + 1);
 
     }
 
