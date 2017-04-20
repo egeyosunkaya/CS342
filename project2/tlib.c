@@ -180,14 +180,21 @@ int tlib_create_thread(void (*func)(void *), void *param)
  */
 int tlib_yield(int wantTid)
 {
+    if(ready_queue->next == NULL){ //!!  ADDED TO AVOID SEGMENTATION FAULT IF NO THREAD LEFT
+        return TLIB_NOMORE;
+    }
     bool first_time = TRUE;
     bool found=FALSE;
 
     // If we want to yield anything, then just yield to next. If It exists..
     // If it doesnt exists, just go to the head of the ready queue.
     if (wantTid == TLIB_ANY) { // printf("Yielding to the ANY!");
-        if (ready_queue->next != NULL) wantTid = ready_queue->next->t_di;  // Next exists
-        else wantTid = ready_queue->t_di;       //  Next not exits. So go to head of the queue.
+            if (currentThread != ready_queue && currentThread->next != NULL) // !!ADDED
+                wantTid = currentThread->next->t_di;  // Next exists
+            else if (currentThread == ready_queue && ready_queue->next != NULL)
+                wantTid = ready_queue->next->t_di;
+            else
+                wantTid = ready_queue->t_di;       //  Next not exits. So go to head of the queue
     }else if (wantTid == TLIB_SELF) // Yielding to itself? Well.. Do nothing
         wantTid = currentThread->t_di;
     else if (wantTid == currentThread->t_di)
@@ -242,7 +249,7 @@ int tlib_delete_thread(int tid)
         deletor->t_cont.uc_stack.ss_size = 0;
         deletor->t_cont.uc_link = 0;
         free(deletor->t_cont.uc_stack.ss_sp);
-        if(thread_count == 1) {                     //Deleting the last element in ready queue
+        if(thread_count == 0) {                     //!!! IT WAS 1 CHANGED IT TO 0
             ready_queue->next = NULL;
             currentThread = ready_queue;
             setcontext(&ready_queue->t_cont);
@@ -285,7 +292,7 @@ int tlib_delete_thread(int tid)
         else
             currentThread = ready_queue;
         first_run = FALSE;
-        setcontext(&currentThread->t_cont);
+        return (TLIB_SUCCESS);                      //!!! ADDED
     }
 
     if(first_run == FALSE)
@@ -296,6 +303,7 @@ int tlib_delete_thread(int tid)
 
 
 #endif
+
 
 
 
